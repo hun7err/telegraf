@@ -41,6 +41,7 @@ type AMQP struct {
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
 
+	// Format the batch as a proper JSON array of objects
 	BatchAsJson bool `toml:"batch_as_json"`
 
 	channel *amqp.Channel
@@ -64,7 +65,7 @@ const (
 	DefaultRetentionPolicy = "default"
 	DefaultDatabase        = "telegraf"
 	DefaultPrecision       = "s"
-	DefaultBatchAsJson     = false
+	DefaultBatchAsJson     = false  // for backward compatibility
 )
 
 var sampleConfig = `
@@ -205,14 +206,16 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 		}
 	} 
 
-	var body []byte
-	var content_type string
+	var body []byte         // body of the message
+	var content_type string // content-type (text/json)
 
 	for key, buf := range outbuf {
 		if q.BatchAsJson {
+            // to ensure the body is a proper JSON array (i.e. [1,2,3])
 			body = []byte("[" + string(bytes.Join(buf, []byte(","))) + "]")
 			content_type = "application/json"
 		} else {
+            // the default settings
 			body = bytes.Join(buf, []byte("\n"))
 			content_type = "text/plain"
 		}
@@ -241,6 +244,7 @@ func init() {
 			Database:        DefaultDatabase,
 			Precision:       DefaultPrecision,
 			RetentionPolicy: DefaultRetentionPolicy,
+			BatchAsJson:     DefaultBatchAsJson,
 		}
 	})
 }
