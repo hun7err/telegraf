@@ -41,6 +41,8 @@ type AMQP struct {
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
 
+    BatchAsJson bool `toml:"batch_as_json"`
+
 	channel *amqp.Channel
 	sync.Mutex
 	headers amqp.Table
@@ -62,6 +64,7 @@ const (
 	DefaultRetentionPolicy = "default"
 	DefaultDatabase        = "telegraf"
 	DefaultPrecision       = "s"
+    DefaultBatchAsJson     = false
 )
 
 var sampleConfig = `
@@ -200,9 +203,20 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 		for _, value := range values {
 			outbuf[key] = append(outbuf[key], []byte(value))
 		}
-	}
+	} 
+
+    var body []byte
+    var content_type string
 
 	for key, buf := range outbuf {
+        if q.BatchAsJson {
+            body = []byte("[" + string(bytes.Join(buf, []byte(","))) + "]")
+            content_type = "application/json"
+        } else {
+            body = bytes.Join(buf, []byte("\n"))
+            content_type = "text/plain"
+        }
+
 		err := q.channel.Publish(
 			q.Exchange, // exchange
 			key,        // routing key
@@ -210,8 +224,8 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 			false,      // immediate
 			amqp.Publishing{
 				Headers:     q.headers,
-				ContentType: "text/plain",
-				Body:        bytes.Join(buf, []byte("\n")),
+				ContentType: content_type,
+				Body:        body,
 			})
 		if err != nil {
 			return fmt.Errorf("FAILED to send amqp message: %s", err)
