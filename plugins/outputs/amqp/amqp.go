@@ -41,7 +41,7 @@ type AMQP struct {
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
 
-    BatchAsJson bool `toml:"batch_as_json"`
+	BatchAsJson bool `toml:"batch_as_json"`
 
 	channel *amqp.Channel
 	sync.Mutex
@@ -205,17 +205,17 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 		}
 	} 
 
-    var body []byte
-    var content_type string
+	var body []byte
+	var content_type string
 
 	for key, buf := range outbuf {
-        if q.BatchAsJson {
-            body = []byte("[" + string(bytes.Join(buf, []byte(","))) + "]")
-            content_type = "application/json"
-        } else {
-            body = bytes.Join(buf, []byte("\n"))
-            content_type = "text/plain"
-        }
+		if q.BatchAsJson {
+			body = []byte("[" + string(bytes.Join(buf, []byte(","))) + "]")
+			content_type = "application/json"
+		} else {
+			body = bytes.Join(buf, []byte("\n"))
+			content_type = "text/plain"
+		}
 
 		err := q.channel.Publish(
 			q.Exchange, // exchange
