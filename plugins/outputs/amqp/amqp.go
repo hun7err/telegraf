@@ -211,11 +211,11 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 
 	for key, buf := range outbuf {
 		if q.BatchAsJson {
-            // to ensure the body is a proper JSON array (i.e. [1,2,3])
+			// to ensure the body is a proper JSON array (i.e. [1,2,3])
 			body = []byte("[" + string(bytes.Join(buf, []byte(","))) + "]")
 			content_type = "application/json"
 		} else {
-            // the default settings
+			// the default settings
 			body = bytes.Join(buf, []byte("\n"))
 			content_type = "text/plain"
 		}
